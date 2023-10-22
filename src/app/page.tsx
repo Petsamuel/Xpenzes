@@ -32,12 +32,17 @@ export default function Home() {
     status: number;
   }>();
 
-  const expense: Expense[] = [];
+  // global decleartion
 
+  // function to calculate total
+  const CalculateTotal = (expense: any[]) => {
+    const total = expense.reduce((acct, curr) => acct + Number(curr.price), 0);
+    setTotal(total);
+  };
   // add items to database
 
-  const addItem = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const addItem = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
 
     if (!user) {
       setInterval(() => {
@@ -47,40 +52,39 @@ export default function Home() {
         });
       }, 100);
       setValue({ title: "", price: "" });
+    } else {
+      // Use the user's UID in the collection path
+      const { uid } = user;
+      const collectionPath = `users/${uid}/expenses`;
+      const docRef = await setDoc(doc(db, collectionPath, value.title), value);
+      setValue({ title: "", price: "" });
     }
-    const { uid } = user;
-    const collectionPath = `users/${uid}/expenses`; // Use the user's UID in the collection path
-    const docRef = await setDoc(doc(db, collectionPath, value.title), value);
-    setValue({ title: "", price: "" });
   };
 
   useEffect(() => {
     // read items for specific user
     const UserView = async () => {
       if (user) {
-        const { uid } = user;
-        const collectionPath = `users/${uid}/expenses`;
-
         try {
+          const { uid } = user;
+          const collectionPath = `users/${uid}/expenses`;
           const q = query(collection(db, collectionPath));
-          const querySnapshot = await getDocs(q);
-          // Initialize a new array
-
-          querySnapshot.forEach((doc) => {
-            expense.push({
-              title: doc.data().title,
-              price: doc.data().price,
+          const expense: Expense[] = [];
+          const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.forEach((doc) => {
+              expense.push({
+                title: doc.data().title,
+                price: doc.data().price,
+              });
             });
+            setList(expense);
+            // Calculate the total
+
+            CalculateTotal(expense);
           });
 
-          setList(expense);
-
-          // Calculate total
-          const total = expense.reduce(
-            (acc, curr) => acc + Number(curr.price),
-            0
-          );
-          setTotal(total);
+          // Return the unsubscribe function to stop listening when the component unmounts
+          return () => unsubscribe();
         } catch (error) {
           console.error("Error fetching data:", error);
           // Handle the error,
@@ -97,15 +101,10 @@ export default function Home() {
               });
             });
             setList(expense);
-            // read total
-            const calculateTotal = () => {
-              const total = expense.reduce(
-                (acc, curr) => acc + Number(curr.price),
-                0
-              );
-              setTotal(total);
-            };
-            calculateTotal();
+            // Calculate the total
+            {
+              CalculateTotal(expense);
+            }
             return () => unSubscribe();
           }
         );
@@ -115,11 +114,20 @@ export default function Home() {
     UserView();
   }, [user]);
 
-  // delete items from database
+  // delete doc items from database
   const removeItem = async (value: string) => {
-    await deleteDoc(doc(db, "expenses", value));
-  };
+    if (user) {
+      // Use the user's UID in the collection path
+      const { uid } = user;
+      const collectionPath = `users/${uid}/expenses`;
+      await deleteDoc(doc(db, collectionPath, value));
+    }
 
+    // Item deleted successfully
+    else {
+      await deleteDoc(doc(db, "expenses", value));
+    }
+  };
   //  downloadFile
   const DownloadFile = async () => {
     const page = document.getElementById("page");
@@ -181,7 +189,7 @@ export default function Home() {
               <a
                 type="submit"
                 className="cursor-pointer  rounded-md text-sm"
-                onClick={(e) => addItem(e)}
+                onClick={(event) => addItem(event)}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
