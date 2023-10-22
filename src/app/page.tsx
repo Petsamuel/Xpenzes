@@ -2,8 +2,22 @@
 import React, { useState, useEffect } from "react";
 import { DownloadButton } from "./components/Button";
 import { AlertMessage } from "./components/AlertMessage";
-import html2PDF from "jspdf-html2canvas";
+// import html2PDF from "jspdf-html2canvas";
 import { UserAuth } from "./context/AuthContext";
+import dynamic from "next/dynamic";
+
+const html2PDF = dynamic(
+  () =>
+    import("jspdf-html2canvas").then(async (module) => {
+      const jsPDF = module.default;
+      const pdf = new (jsPDF as any)("p", "pt");
+      return pdf;
+    }),
+  {
+    ssr: false,
+  }
+) as React.FunctionComponent;
+
 import {
   collection,
   doc,
@@ -117,41 +131,52 @@ export default function Home() {
       // Item deleted successfully for authenticated users
     } else {
       // setInterval
-    
-        // Set the error message
-        setAlert({ message: "Please login to continue", status: 403 });
-        // Set the timer to clear the error message
-        const timer = setTimeout(() => {
-          setAlert({message: "", status: 0}); // Clear the error message
-        }, 3000);
 
-        // Cleanup function to clear the timer when the component unmounts
-        return () => {
-          clearTimeout(timer);
-        };
-    
+      // Set the error message
+      setAlert({ message: "Please login to continue", status: 403 });
+      // Set the timer to clear the error message
+      const timer = setTimeout(() => {
+        setAlert({ message: "", status: 0 }); // Clear the error message
+      }, 3000);
+
+      // Cleanup function to clear the timer when the component unmounts
+      return () => {
+        clearTimeout(timer);
+      };
+
       // Uncomment the next line if you want unauthenticated users to delete items from the shared collection
       // await deleteDoc(doc(db, "expenses", value);
     }
   };
 
-
   //  downloadFile
-  const DownloadFile = async () => {
+  const DownloadFile = () => {
     const page = document.getElementById("page");
 
     if (page) {
-      const pdf = await html2PDF(page, {
+      html2PDF(page, {
         jsPDF: {
           format: "a4",
         },
-
         imageType: "image/jpeg",
         output: "./pdf/generate.pdf",
       });
       setAlert({ message: "File downloaded", status: 200 });
+      const timer = setTimeout(() => {
+        setAlert({ message: "", status: 0 });
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
       setAlert({ message: "No PDF file to download", status: 400 });
+
+      const timer = setTimeout(() => {
+        setAlert({ message: "", status: 0 });
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+      };
     }
   };
   // prevent screenshot
@@ -278,7 +303,7 @@ export default function Home() {
               {/* download button */}
             </div>
           )}
-          {user && <DownloadButton handleEvent={DownloadFile} />}
+          {list.length != 0 && <DownloadButton handleEvent={DownloadFile} />}
         </div>
 
         {/*  */}
