@@ -22,7 +22,7 @@ export const Header = () => {
         {user ? (
           <div className="mx-4 flex justify-between items-center gap-4">
             <div className="flex text-sm items-center gap-3">
-              <p> Hello, {user.displayName}</p>
+              <p className="hidden  lg:block"> Hello, {user.displayName}</p>
               <img
                 src={user && user.photoURL}
                 width={40}
@@ -87,7 +87,7 @@ export const Header = () => {
         )}
       </nav>
 
-      <h1 className="text-xl md:text-2xl lg:text-4xl font-bold leading-5 text-green-200 brand">
+      <h1 className="text-xl md:text-2xl lg:text-4xl font-bold leading-5 text-green-200 brand hidden">
         XPense Wise
       </h1>
 

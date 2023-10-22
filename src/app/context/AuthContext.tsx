@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return setDate({ year: year, day: day, month: month });
     };
     DateYear();
-  });
+  },[]);
 
   return (
     <Authcontext.Provider value={{ date, user, signInUser, signOutUser }}>

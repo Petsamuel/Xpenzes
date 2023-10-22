@@ -10,8 +10,6 @@ import {
   setDoc,
   onSnapshot,
   deleteDoc,
-  getDocs,
-  where,
   query,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -39,24 +37,18 @@ export default function Home() {
     const total = expense.reduce((acct, curr) => acct + Number(curr.price), 0);
     setTotal(total);
   };
-  // add items to database
+  // Add items to database
 
   const addItem = async (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
 
     if (!user) {
-      setInterval(() => {
-        setAlert({
-          message: "Please login to add items",
-          status: 403,
-        });
-      }, 100);
-      setValue({ title: "", price: "" });
+      await setDoc(doc(db, "expenses", value.title), value);
     } else {
       // Use the user's UID in the collection path
       const { uid } = user;
       const collectionPath = `users/${uid}/expenses`;
-      const docRef = await setDoc(doc(db, collectionPath, value.title), value);
+      await setDoc(doc(db, collectionPath, value.title), value);
       setValue({ title: "", price: "" });
     }
   };
@@ -65,12 +57,13 @@ export default function Home() {
     // read items for specific user
     const UserView = async () => {
       if (user) {
+        const { uid } = user;
+        const collectionPath = `users/${uid}/expenses`;
+        const q = query(collection(db, collectionPath));
+
         try {
-          const { uid } = user;
-          const collectionPath = `users/${uid}/expenses`;
-          const q = query(collection(db, collectionPath));
-          const expense: Expense[] = [];
           const unsubscribe = onSnapshot(q, (snapshot) => {
+            const expense: Expense[] = [];
             snapshot.forEach((doc) => {
               expense.push({
                 title: doc.data().title,
@@ -100,6 +93,7 @@ export default function Home() {
                 price: doc.data().price,
               });
             });
+
             setList(expense);
             // Calculate the total
             {
@@ -114,20 +108,34 @@ export default function Home() {
     UserView();
   }, [user]);
 
-  // delete doc items from database
   const removeItem = async (value: string) => {
     if (user) {
       // Use the user's UID in the collection path
       const { uid } = user;
       const collectionPath = `users/${uid}/expenses`;
       await deleteDoc(doc(db, collectionPath, value));
-    }
+      // Item deleted successfully for authenticated users
+    } else {
+      // setInterval
+    
+        // Set the error message
+        setAlert({ message: "Please login to continue", status: 403 });
+        // Set the timer to clear the error message
+        const timer = setTimeout(() => {
+          setAlert({message: "", status: 0}); // Clear the error message
+        }, 3000);
 
-    // Item deleted successfully
-    else {
-      await deleteDoc(doc(db, "expenses", value));
+        // Cleanup function to clear the timer when the component unmounts
+        return () => {
+          clearTimeout(timer);
+        };
+    
+      // Uncomment the next line if you want unauthenticated users to delete items from the shared collection
+      // await deleteDoc(doc(db, "expenses", value);
     }
   };
+
+
   //  downloadFile
   const DownloadFile = async () => {
     const page = document.getElementById("page");
@@ -147,14 +155,14 @@ export default function Home() {
     }
   };
   // prevent screenshot
-  document.oncontextmenu = function () {
-    return false;
-  };
-  document.onkeydown = function (e) {
-    if (e.ctrlKey && (e.key === "s" || e.key === "S")) {
-      e.preventDefault();
-    }
-  };
+  // document.oncontextmenu = function () {
+  //   return false;
+  // };
+  // document.onkeydown = function (e) {
+  //   if (e.ctrlKey && (e.key === "s" || e.key === "S")) {
+  //     e.preventDefault();
+  //   }
+  // };
 
   return (
     <>
@@ -216,10 +224,10 @@ export default function Home() {
               <table className="min-w-full bg-[#262534] mt-6  table-fixed">
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xl font-medium  uppercase tracking-wider">
+                    <th className="px-6 py-3 text-md text-left lg:text-xl font-medium  capitalize tracking-wider">
                       Expense
                     </th>
-                    <th className="px-6 py-3 text-left text-xl font-medium uppercase tracking-wider">
+                    <th className="px-6 py-3 text-md text-left lg:text-xl font-medium capitalize tracking-wider">
                       Price
                     </th>
                     <th className="px-6 py-3"></th>
@@ -238,26 +246,24 @@ export default function Home() {
                         {value.price}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {user && (
-                          <span
-                            onClick={() => {
-                              removeItem(value.title);
-                            }}
-                            className="cursor-pointer flex justify-center items-center"
+                        <span
+                          onClick={() => {
+                            removeItem(value.title);
+                          }}
+                          className="cursor-pointer flex justify-center items-center"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            fill="#f59e0b"
+                            className="bi bi-trash"
+                            viewBox="0 0 16 16"
                           >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="18"
-                              height="18"
-                              fill="#f59e0b"
-                              className="bi bi-trash"
-                              viewBox="0 0 16 16"
-                            >
-                              <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
-                              <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
-                            </svg>
-                          </span>
-                        )}
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
+                          </svg>
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -363,7 +369,7 @@ export default function Home() {
           </div>
         </div>
         {/* alertMessage */}
-        <div className={alert?.status == undefined ? "hidden" : "block"}>
+        <div className={alert?.status == 0 ? "hidden" : "block"}>
           {alert?.message && <AlertMessage message={alert} />}
         </div>
       </main>
