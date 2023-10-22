@@ -2,7 +2,7 @@
 const nextConfig = {};
 
 module.exports = {
-  async headers() {
+   headers() {
     return [
       {
         source: "/(.*)",
