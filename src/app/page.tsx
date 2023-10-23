@@ -153,13 +153,38 @@ export default function Home() {
     const page = document.getElementById("page");
 
     if (page) {
+      // html2PDF(page, {
+      //   jsPDF: {
+      //     format: "a4",
+      //   },
+      //   imageType: "image/jpeg",
+      //   // output: "https://xpenzes.vercel.app/Xpenze.pdf",
+      //   output: function (pdf: { output: (arg0: string) => any }) {
+      //     var blob = pdf.output("blob");
+      //     var url = URL.createObjectURL(blob);
+      //     window.location.href = url;
+      //   },
+      // });
       html2PDF(page, {
         jsPDF: {
           format: "a4",
         },
         imageType: "image/jpeg",
-        output: "https://xpenzes.vercel.app/Xpenze.pdf",
+        output: function (pdf: { output: (arg0: string) => any }) {
+          var blob = pdf.output("blob");
+          var url = URL.createObjectURL(blob);
+
+          // Create an anchor element for downloading
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "your_pdf_file.pdf";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        },
       });
+
       setAlert({ message: "File downloaded", status: 200 });
       const timer = setTimeout(() => {
         setAlert({ message: "", status: 0 });
