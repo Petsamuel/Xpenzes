@@ -3,20 +3,8 @@ import React, { useState, useEffect } from "react";
 import { DownloadButton } from "./components/Button";
 import { AlertMessage } from "./components/AlertMessage";
 import { UserAuth } from "./context/AuthContext";
-import dynamic from "next/dynamic";
-
-const html2PDF = dynamic(
-  () =>
-    import("jspdf-html2canvas").then(async (module) => {
-      const jsPDF = module.default;
-      const pdf = new (jsPDF as any)("p", "pt");
-      return pdf;
-    }),
-  {
-    ssr: false,
-  }
-) as React.FunctionComponent;
-
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   collection,
   doc,
@@ -42,6 +30,7 @@ export default function Home() {
     message: string;
     status: number;
   }>();
+  const html2doc = new jsPDF();
 
   // global decleartion
 
@@ -149,41 +138,32 @@ export default function Home() {
   };
 
   //  downloadFile
-  const DownloadFile = () => {
+  const DownloadFile = async () => {
     const page = document.getElementById("page");
 
     if (page) {
-      // html2PDF(page, {
-      //   jsPDF: {
-      //     format: "a4",
-      //   },
-      //   imageType: "image/jpeg",
-      //   // output: "https://xpenzes.vercel.app/Xpenze.pdf",
-      //   output: function (pdf: { output: (arg0: string) => any }) {
-      //     var blob = pdf.output("blob");
-      //     var url = URL.createObjectURL(blob);
-      //     window.location.href = url;
-      //   },
-      // });
-      html2PDF(page, {
-        jsPDF: {
-          format: "a4",
-        },
-        imageType: "image/jpeg",
-        output: function (pdf: { output: (arg0: string) => any }) {
-          var blob = pdf.output("blob");
-          var url = URL.createObjectURL(blob);
-
-          // Create an anchor element for downloading
-          var a = document.createElement("a");
-          a.href = url;
-          a.download = "your_pdf_file.pdf";
-          a.style.display = "none";
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        },
+      // Convert the HTML element to canvas using html2canvas with scale option
+      const canvas = await html2canvas(page, {
+        scale: 2, // Increase the scale for better quality
+        useCORS: true, // Enable CORS for images
       });
+
+      // Get the image data URL from the canvas
+      const imageData = canvas.toDataURL("image/png");
+
+      // Add the image to the PDF file using addImage method
+      html2doc.addImage(
+        imageData,
+        "PNG",
+        10,
+        10,
+        html2doc.internal.pageSize.getWidth() - 20, // Adjust the width to fit the page size
+        (canvas.height * html2doc.internal.pageSize.getWidth()) / canvas.width -
+          20 // Adjust the height to maintain aspect ratio
+      );
+
+      // Save the PDF file using save method
+      html2doc.save("Xpenze.pdf");
 
       setAlert({ message: "File downloaded", status: 200 });
       const timer = setTimeout(() => {
